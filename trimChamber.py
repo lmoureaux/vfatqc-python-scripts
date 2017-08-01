@@ -8,6 +8,7 @@ By: Christine McLean (ch.mclean@cern.ch),
 """
 
 import sys
+import ROOT as r
 from array import array
 from gempython.tools.vfat_user_functions_uhal import *
 from gempython.utils.nesteddict import nesteddict as ndict
