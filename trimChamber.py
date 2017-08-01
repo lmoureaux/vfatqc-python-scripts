@@ -1,7 +1,10 @@
 #!/bin/env python
 """
 Script to set trimdac values on a chamber
-By: Christine McLean (ch.mclean@cern.ch), Cameron Bravo (c.bravo@cern.ch), Elizabeth Starling (elizabeth.starling@cern.ch)
+By: Christine McLean (ch.mclean@cern.ch),
+    Cameron Bravo (c.bravo@cern.ch),
+    Elizabeth Starling (elizabeth.starling@cern.ch),
+    Louis Moureaux (lmoureau@ulb.ac.be),
 """
 
 import sys
@@ -49,6 +52,7 @@ writeAllVFATs(ohboard, options.gtx, "VThreshold1", options.vt1, 0)
 
 CHAN_MIN = 0
 CHAN_MAX = 128
+VT1_MAX = 255
 
 masks = ndict()
 for vfat in range(0,24):
@@ -173,6 +177,44 @@ if rangeFile == None:
                 tRanges[vfat] += 1
                 trimVcal[vfat] = sup[vfat]
                 trimCH[vfat] = supCH[vfat]
+    ##############################
+    # Threshold scan @ TrimDAC=31
+    ##############################
+    runCommand(["ultraThreshold.py","--shelf=%i"%(options.shelf),"-s%d"%(options.slot),"-g%d"%(options.gtx),"--vfatmask=%i"%(options.vfatmask),"--perchannel"])
+    thrFile = r.TFile("VThreshold1Data_Trimmed.root")
+    noiseMaxVT1 = [ np.array(128) for vfat in range(24) ]
+    for event in thrFile.thrTree:
+        noiseMaxVT1[event.vfatN] = max(maxVT1[event.vfatN], event.vth1)
+        pass
+    # Bias VFATs
+    for vfat in range(24):
+        vt1 = noiseMaxVT1[vfat].max() + 5 # Bump by 5 units to make sure we're above noise
+        biasVFAT(ohboard,options.gtx,0x0,enable=False)
+        writeVFAT(ohboard, options.gtx, "VThreshold1", vt1, 0)
+    ###############
+    # TRIMDAC = 0
+    ###############
+    # Configure
+    zeroAllVFATChannels(ohboard,options.gtx,mask=0x0)
+    for vfat in range(0,24):
+        writeVFAT(ohboard, options.gtx, vfat, "ContReg3", tRanges[vfat],0)
+    # Scurve scan with trimdac set to 0
+    filename0 = "%s/SCurveData_trimdac0_range0_vt1.root"%dirPath
+    runCommand(["ultraScurve.py",
+                "--shelf=%i"%(options.shelf),
+                "-s%d"%(options.slot),
+                "-g%d"%(options.gtx),
+                "--filename=%s"%(filename0),
+                "--vfatmask=%i"%(options.vfatmask)]
+            )
+    muFits_0 = fitScanData(filename0)
+    for vfat in range(0,24):
+        trimValue = muFits_0[0][vfat] - ztrim*muFits_0[1][vfat]
+        supCH[vfat] = np.argmin(trimValue)
+        sup[vfat] = trimValue[supCH[vfat]]
+        print "vfat: %i"%vfat
+        print "sup: %f  inf: %f"%(sup[vfat],inf[vfat])
+        print "supCH: %f  infCH: %f"%(supCH[vfat],infCH[vfat])
     print "trimRanges found"
 else:
     try:
