@@ -192,7 +192,7 @@ if rangeFile == None:
     for vfat in range(24):
         vt1 = noiseMaxVT1[vfat] + 5 # Bump by 5 units to make sure we're above noise
         biasVFAT(ohboard,options.gtx,0x0,enable=False)
-        writeVFAT(ohboard, options.gtx, "VThreshold1", vt1, 0)
+        writeVFAT(ohboard, options.gtx, vfat, "VThreshold1", vt1, 0)
     ###############
     # TRIMDAC = 0
     ###############
