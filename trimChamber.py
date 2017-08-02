@@ -184,7 +184,7 @@ if rangeFile == None:
     ##############################
     runCommand(["ultraThreshold.py","--shelf=%i"%(options.shelf),"-s%d"%(options.slot),"-g%d"%(options.gtx),"--vfatmask=%i"%(options.vfatmask),"--perchannel"])
     thrFile = r.TFile("VThreshold1Data_Trimmed.root")
-    noiseMaxVT1 = np.array(24)
+    noiseMaxVT1 = np.zeros(24)
     for event in thrFile.thrTree:
         noiseMaxVT1[event.vfatN] = max(noiseMaxVT1[event.vfatN], event.vth1)
         pass
