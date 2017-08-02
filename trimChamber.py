@@ -184,13 +184,13 @@ if rangeFile == None:
     ##############################
     runCommand(["ultraThreshold.py","--shelf=%i"%(options.shelf),"-s%d"%(options.slot),"-g%d"%(options.gtx),"--vfatmask=%i"%(options.vfatmask),"--perchannel"])
     thrFile = r.TFile("VThreshold1Data_Trimmed.root")
-    noiseMaxVT1 = [ np.array(128) for vfat in range(24) ]
+    noiseMaxVT1 = np.array(24)
     for event in thrFile.thrTree:
         noiseMaxVT1[event.vfatN] = max(noiseMaxVT1[event.vfatN], event.vth1)
         pass
     # Bias VFATs
     for vfat in range(24):
-        vt1 = noiseMaxVT1[vfat].max() + 5 # Bump by 5 units to make sure we're above noise
+        vt1 = noiseMaxVT1[vfat] + 5 # Bump by 5 units to make sure we're above noise
         biasVFAT(ohboard,options.gtx,0x0,enable=False)
         writeVFAT(ohboard, options.gtx, "VThreshold1", vt1, 0)
     ###############
