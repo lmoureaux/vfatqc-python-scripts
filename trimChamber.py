@@ -186,7 +186,7 @@ if rangeFile == None:
     thrFile = r.TFile("VThreshold1Data_Trimmed.root")
     noiseMaxVT1 = [ np.array(128) for vfat in range(24) ]
     for event in thrFile.thrTree:
-        noiseMaxVT1[event.vfatN] = max(maxVT1[event.vfatN], event.vth1)
+        noiseMaxVT1[event.vfatN] = max(noiseMaxVT1[event.vfatN], event.vth1)
         pass
     # Bias VFATs
     for vfat in range(24):
