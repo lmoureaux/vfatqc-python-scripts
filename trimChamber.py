@@ -298,6 +298,13 @@ runCommand(["ultraScurve.py",
             "--nevts=%i"%(options.nevts)]
           )
 
+vfatConfig = open('%s/vfatConfig.txt'%dirPath,'w')
+vfatConfig.write('vfatN/I:vt1/I:trimRange/I\n')
+for vfat in range(0,24):
+    vfatConfig.write('%i\t%i\t%i\n'%(vfat,vt1[vfat],tRanges[vfat]))
+    pass
+vfatConfig.close()
+
 scanFilename = '%s/scanInfo.txt'%dirPath
 outF = open(scanFilename,'w')
 outF.write('vfat/I:tRange/I:sup/D:inf/D:trimVcal/D:trimCH/D\n')
