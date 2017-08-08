@@ -18,13 +18,23 @@ from mapping.chamberInfo import chamber_config
 
 from qcoptions import parser
 
+# To be moved in anautilities.py later on
+def medianAndMAD(arrayData, axis=None):
+    """Returns a tuple containing the (median, MAD) of a data sample"""
+    median = np.median(arrayData, axis)
+    diff = np.abs(arrayData - median)
+    return median, np.median(diff, axis)
+
 parser.add_option("--trimRange", type="string", dest="rangeFile", default=None,
                   help="Specify the file to take trim ranges from", metavar="rangeFile")
 parser.add_option("--dirPath", type="string", dest="dirPath", default=None,
                   help="Specify the path where the scan data should be stored", metavar="dirPath")
+parser.add_option("--zscore", type="float", dest="zscore",
+                  help="Z-score for choosing VT1", metavar="zscore", default=5)
+parser.add_option("--vt1bump", type="int", dest="vt1bump",
+                  help="Adds a constant term to the computed VT1", metavar="vt1bump", default=0)
 parser.add_option("--vt1", type="int", dest="vt1",
-                  help="VThreshold1 DAC value for all VFATs", metavar="vt1", default=100)
-
+                  help="Initial VThreshold1 DAC value for all VFATs", metavar="vt1", default=100)
 
 uhal.setLogLevelTo( uhal.LogLevel.WARNING )
 (options, args) = parser.parse_args()
@@ -185,18 +195,21 @@ if rangeFile == None:
     print "Starting threshold scan"
     runCommand(["ultraThreshold.py","--shelf=%i"%(options.shelf),"-s%d"%(options.slot),"-g%d"%(options.gtx),"--vfatmask=%i"%(options.vfatmask),"--perchannel"])
     thrFile = r.TFile("VThreshold1Data_Trimmed.root")
-    noiseMaxVT1 = np.zeros(24, dtype=int)
+    noiseMax = np.zeros((24, 128), dtype=int)
     for event in thrFile.thrTree:
         if event.Nhits > 0:
-            noiseMaxVT1[event.vfatN] = max(noiseMaxVT1[event.vfatN], event.vth1)
+            noiseMax[event.vfatN][event.vfatCH] = max(noiseMax[event.vfatN][event.vfatCH], event.vth1)
+            pass
         pass
+    noiseMaxMedian, noiseMaxMAD = medianAndMAD(noiseMax, axis=1)
+    vt1 = (noiseMaxMedian + options.zscore * noiseMaxMAD + options.vt1bump).astype(int)
     # Bias VFATs
     biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
     print "Configuring VT1"
     for vfat in range(24):
-        vt1 = noiseMaxVT1[vfat] + 5 # Bump by 5 units to make sure we're above noise
-        print "VFAT %d: VT1=%d"%(vfat, vt1)
-        writeVFAT(ohboard, options.gtx, vfat, "VThreshold1", vt1, 0)
+        print "VFAT %d: VT1=%d"%(vfat, vt1[vfat])
+        writeVFAT(ohboard, options.gtx, vfat, "VThreshold1", vt1[vfat], 0)
+        pass
     ###############
     # TRIMDAC = 0
     ###############
