@@ -231,9 +231,9 @@ if rangeFile == None:
     for vfat in range(0,24):
         trimValue = muFits_0[0][vfat] - ztrim*muFits_0[1][vfat]
         supCH[vfat] = np.argmin(trimValue)
-        sup[vfat] = trimValue[supCH[vfat]]
+        goodSup[vfat] = trimValue[supCH[vfat]]
         print "vfat: %i"%vfat
-        print "sup:   %f"%sup[vfat]
+        print "sup:   %f"%goodSup[vfat]
         print "supCH: %f"%supCH[vfat]
     print "trimRanges found"
 else:
