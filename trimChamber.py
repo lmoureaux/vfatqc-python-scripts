@@ -182,6 +182,7 @@ if rangeFile == None:
     ##############################
     # Threshold scan @ TrimDAC=31
     ##############################
+    print "Starting threshold scan"
     runCommand(["ultraThreshold.py","--shelf=%i"%(options.shelf),"-s%d"%(options.slot),"-g%d"%(options.gtx),"--vfatmask=%i"%(options.vfatmask),"--perchannel"])
     thrFile = r.TFile("VThreshold1Data_Trimmed.root")
     noiseMaxVT1 = np.zeros(24, dtype=int)
@@ -191,13 +192,16 @@ if rangeFile == None:
         pass
     # Bias VFATs
     biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
+    print "Configuring VT1"
     for vfat in range(24):
         vt1 = noiseMaxVT1[vfat] + 5 # Bump by 5 units to make sure we're above noise
+        print "VFAT %d: VT1=%d"%(vfat, vt1)
         writeVFAT(ohboard, options.gtx, vfat, "VThreshold1", vt1, 0)
     ###############
     # TRIMDAC = 0
     ###############
     # Configure
+    print "Configuring TrimRange"
     zeroAllVFATChannels(ohboard,options.gtx,mask=0x0)
     for vfat in range(0,24):
         writeVFAT(ohboard, options.gtx, vfat, "ContReg3", tRanges[vfat],0)
@@ -216,8 +220,8 @@ if rangeFile == None:
         supCH[vfat] = np.argmin(trimValue)
         sup[vfat] = trimValue[supCH[vfat]]
         print "vfat: %i"%vfat
-        print "sup: %f  inf: %f"%(sup[vfat],inf[vfat])
-        print "supCH: %f  infCH: %f"%(supCH[vfat],infCH[vfat])
+        print "sup:   %f"%sup[vfat]
+        print "supCH: %f"%supCH[vfat]
     print "trimRanges found"
 else:
     try:
