@@ -58,6 +58,22 @@ ohboard = getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 if options.dirPath == None: dirPath = '%s/%s/trimming/z%f/%s'%(dataPath,chamber_config[options.gtx],ztrim,startTime)
 else: dirPath = options.dirPath
 
+def runSCurve(filename, doFit=True):
+    """Runs an S-curve with the current VFAT configuration. The data file will
+    be written to <dirPath>/<filename>. If doFit is True (the default), the data
+    is also fitted, and the fit results are returned."""
+    filename = "%s/%s"%(dirPath,filename)
+    runCommand(["ultraScurve.py",
+                "--shelf=%i"%(options.shelf),
+                "-s%d"%(options.slot),
+                "-g%d"%(options.gtx),
+                "--filename=%s"%(filename),
+                "--vfatmask=%i"%(options.vfatmask),
+                "--nevts=%i"%(options.nevts)]
+            )
+    if doFit:
+        return fitScanData(filename)
+
 # bias vfats
 biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
 writeAllVFATs(ohboard, options.gtx, "VThreshold1", options.vt1, 0)
@@ -96,17 +112,7 @@ for vfat in range(0,24):
 zeroAllVFATChannels(ohboard,options.gtx,mask=0x0)
 
 # Scurve scan with trimdac set to 0
-filename0 = "%s/SCurveData_trimdac0_range0.root"%dirPath
-runCommand(["ultraScurve.py",
-            "--shelf=%i"%(options.shelf),
-            "-s%d"%(options.slot),
-            "-g%d"%(options.gtx),
-            "--filename=%s"%(filename0),
-            "--vfatmask=0x%x"%(options.vfatmask),
-            "--nevts=%i"%(options.nevts)]
-          )
-
-muFits_0  = fitScanData(filename0)
+muFits_0 = runSCurve("SCurveData_trimdac0_range0.root")
 for vfat in range(0,24):
     for ch in range(CHAN_MIN,CHAN_MAX):
         if muFits_0[4][vfat][ch] < 0.1: masks[vfat][ch] = True
@@ -143,18 +149,8 @@ if rangeFile == None:
                 writeVFAT(ohboard,options.gtx,vfat,"VFATChannels.ChanReg%d"%(scCH),31)
         
         #Scurve scan with trimdac set to 31 (maximum trimming)
-        filename31 = "%s/SCurveData_trimdac31_range%i.root"%(dirPath,trimRange)
-        runCommand(["ultraScurve.py",
-                    "--shelf=%i"%(options.shelf),
-                    "-s%d"%(options.slot),
-                    "-g%d"%(options.gtx),
-                    "--filename=%s"%(filename31),
-                    "--vfatmask=0x%x"%(options.vfatmask),
-                    "--nevts=%i"%(options.nevts)]
-                  )
-        
         #For each channel, check that the infimum of the scan with trimDAC = 31 is less than the subprimum of the scan with trimDAC = 0. The difference should be greater than the trimdac range.
-        muFits_31 = fitScanData(filename31)
+        muFits_31 = runSCurve("SCurveData_trimdac31_range%i.root"%trimRange)
         
         inf = ndict()
         infCH = ndict()
@@ -219,15 +215,7 @@ if rangeFile == None:
     for vfat in range(0,24):
         writeVFAT(ohboard, options.gtx, vfat, "ContReg3", tRanges[vfat],0)
     # Scurve scan with trimdac set to 0
-    filename0 = "%s/SCurveData_trimdac0_range0_vt1.root"%dirPath
-    runCommand(["ultraScurve.py",
-                "--shelf=%i"%(options.shelf),
-                "-s%d"%(options.slot),
-                "-g%d"%(options.gtx),
-                "--filename=%s"%(filename0),
-                "--vfatmask=%i"%(options.vfatmask)]
-            )
-    muFits_0 = fitScanData(filename0)
+    muFits_0 = runSCurve("SCurveData_trimdac0_range0_vt1.root")
     for vfat in range(0,24):
         trimValue = muFits_0[0][vfat] - ztrim*muFits_0[1][vfat]
         supCH[vfat] = np.argmin(trimValue)
@@ -265,19 +253,8 @@ for i in range(0,5):
         for ch in range(CHAN_MIN,CHAN_MAX):
             trimDACs[vfat][ch] += pow(2,4-i)
             writeVFAT(ohboard,options.gtx,vfat,"VFATChannels.ChanReg%d"%(ch),trimDACs[vfat][ch])
-    # Run an SCurve
-    filenameBS = "%s/SCurveData_binarySearch%i.root"%(dirPath,i)
-    runCommand(["ultraScurve.py",
-                "--shelf=%i"%(options.shelf),
-                "-s%d"%(options.slot),
-                "-g%d"%(options.gtx),
-                "--filename=%s"%(filenameBS),
-                "--vfatmask=0x%x"%(options.vfatmask),
-                "--nevts=%i"%(options.nevts)]
-              )
-
-    # Fit Scurve data
-    fitData = fitScanData(filenameBS)
+    # Run an SCurve and fit data
+    fitData = runSCurve("SCurveData_binarySearch%i.root"%i)
     # Now use data to determine the new trimDAC value
     for vfat in range(0,24):
         for ch in range(CHAN_MIN,CHAN_MAX):
@@ -288,15 +265,7 @@ for vfat in range(0,24):
     for ch in range(CHAN_MIN,CHAN_MAX):
         writeVFAT(ohboard,options.gtx,vfat,"VFATChannels.ChanReg%d"%(ch),trimDACs[vfat][ch])
 
-filenameFinal = "%s/SCurveData_Trimmed.root"%dirPath
-runCommand(["ultraScurve.py",
-            "--shelf=%i"%(options.shelf),
-            "-s%d"%(options.slot),
-            "-g%d"%(options.gtx),
-            "--filename=%s"%(filenameFinal),
-            "--vfatmask=0x%x"%(options.vfatmask),
-            "--nevts=%i"%(options.nevts)]
-          )
+runSCurve("SCurveData_Trimmed.root"%i, doFit=False)
 
 vfatConfig = open('%s/vfatConfig.txt'%dirPath,'w')
 vfatConfig.write('vfatN/I:vt1/I:trimRange/I\n')
