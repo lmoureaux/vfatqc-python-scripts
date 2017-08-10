@@ -19,10 +19,12 @@ from mapping.chamberInfo import chamber_config
 from qcoptions import parser
 
 # To be moved in anautilities.py later on
-def medianAndMAD(arrayData, axis=None):
+def medianAndMAD(arrayData, axis=0):
     """Returns a tuple containing the (median, MAD) of a data sample"""
     median = np.median(arrayData, axis)
-    diff = np.abs(arrayData - median)
+    # Build an array of the same dimensions as median by repeating it
+    repeatedMedian = np.expand_dims(median, axis=axis).repeat(arrayData.shape[axis], axis=axis)
+    diff = np.abs(arrayData - repeatedMedian)
     return median, np.median(diff, axis)
 
 parser.add_option("--trimRange", type="string", dest="rangeFile", default=None,
