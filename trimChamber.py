@@ -267,7 +267,7 @@ for vfat in range(0,24):
     for ch in range(CHAN_MIN,CHAN_MAX):
         writeVFAT(ohboard,options.gtx,vfat,"VFATChannels.ChanReg%d"%(ch),trimDACs[vfat][ch])
 
-runSCurve("SCurveData_Trimmed.root"%i, doFit=False)
+runSCurve("SCurveData_Trimmed.root", doFit=False)
 
 vfatConfig = open('%s/vfatConfig.txt'%dirPath,'w')
 vfatConfig.write('vfatN/I:vt1/I:trimRange/I\n')
