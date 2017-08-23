@@ -19,13 +19,12 @@ from mapping.chamberInfo import chamber_config
 from qcoptions import parser
 
 # To be moved in anautilities.py later on
-def medianAndMAD(arrayData, axis=0):
+def medianAndMAD(arrayData):
     """Returns a tuple containing the (median, MAD) of a data sample"""
-    median = np.median(arrayData, axis)
+    median = np.median(arrayData)
     # Build an array of the same dimensions as median by repeating it
-    repeatedMedian = np.expand_dims(median, axis=axis).repeat(arrayData.shape[axis], axis=axis)
-    diff = np.abs(arrayData - repeatedMedian)
-    return median, np.median(diff, axis)
+    diff = np.abs(arrayData - median)
+    return median, np.median(diff)
 
 parser.add_option("--trimRange", type="string", dest="rangeFile", default=None,
                   help="Specify the file to take trim ranges from", metavar="rangeFile")
@@ -199,7 +198,12 @@ if rangeFile == None:
             noiseMax[event.vfatN][event.vfatCH] = max(noiseMax[event.vfatN][event.vfatCH], event.vth1)
             pass
         pass
-    noiseMaxMedian, noiseMaxMAD = medianAndMAD(noiseMax, axis=1)
+    noiseMaxVT1 = convertThresholdToVT1(noiseMax) # Noise maximum in VT1 units
+    noiseMaxMedian = np.zeros(24)
+    noiseMaxMAD = np.zeros(24)
+    for vfat in range(24):
+        noiseMaxMedian[vfat], noiseMaxMAD[vfat] = medianAndMAD(noiseMaxVT1[vfat])
+        pass
     vt1 = (noiseMaxMedian + options.zscore * noiseMaxMAD + options.vt1bump).astype(int)
     # Bias VFATs
     biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
