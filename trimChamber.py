@@ -22,7 +22,6 @@ from qcoptions import parser
 def medianAndMAD(arrayData):
     """Returns a tuple containing the (median, MAD) of a data sample"""
     median = np.median(arrayData)
-    # Build an array of the same dimensions as median by repeating it
     diff = np.abs(arrayData - median)
     return median, np.median(diff)
 
