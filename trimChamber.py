@@ -58,6 +58,14 @@ ohboard = getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 if options.dirPath == None: dirPath = '%s/%s/trimming/z%f/%s'%(dataPath,chamber_config[options.gtx],ztrim,startTime)
 else: dirPath = options.dirPath
 
+def convertThresholdToVT1(threshold):
+    """Converts a threshold in VCal units to the corresponding VT1 value."""
+    return threshold - 20 # Rough estimate for now
+
+def convertVT1ToThreshold(vt1):
+    """Converts a VT1 value to an expected threshold in VCal units."""
+    return vt1 + 20 # Rough estimate for now
+
 def runSCurve(filename, doFit=True):
     """Runs an S-curve with the current VFAT configuration. The data file will
     be written to <dirPath>/<filename>. If doFit is True (the default), the data
