@@ -205,18 +205,31 @@ if rangeFile == None:
             noiseMax[event.vfatN][event.vfatCH] = max(noiseMax[event.vfatN][event.vfatCH], event.vth1)
             pass
         pass
-    noiseMaxVT1 = convertThresholdToVT1(noiseMax) # Noise maximum in VT1 units
     noiseMaxMedian = np.zeros(24)
     noiseMaxMAD = np.zeros(24)
     for vfat in range(24):
-        noiseMaxMedian[vfat], noiseMaxMAD[vfat] = medianAndMAD(noiseMaxVT1[vfat])
+        print 'VFAT %d' % vfat
+        print noiseMax[vfat]
+        print goodInf[vfat], convertThresholdToVT1(goodInf[vfat])
+        noiseMaxMedian[vfat], noiseMaxMAD[vfat] = medianAndMAD(noiseMax[vfat])
+        print noiseMaxMedian[vfat]
+        print noiseMaxMAD[vfat]
         pass
-    vt1 = (noiseMaxMedian + options.zscore * noiseMaxMAD + options.vt1bump).astype(int)
+    print 'Noise MED', noiseMaxMedian
+    print 'Noise MAD', noiseMaxMAD
+    # We want to align trimVcal just above noise
+    alignTo = noiseMaxMedian + options.zscore * noiseMaxMAD + options.vt1bump # VT1 units
+    trimVT1 = np.zeros(24)
+    for vfat in range(24):
+        trimVT1[vfat] = convertThresholdToVT1(trimVcal[vfat]) # VT1 units
+        pass
+    vt1 = (alignTo + options.vt1 - trimVT1).astype(int)
+    trimVcal = convertVT1ToThreshold(alignTo).astype(int) # DAC units
     # Bias VFATs
     biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
     print "Configuring VT1"
     for vfat in range(24):
-        print "VFAT %d: VT1=%d"%(vfat, vt1[vfat])
+        print "VFAT %d: alignTo=%d, VT1=%d, trimVcal=%d"%(vfat, alignTo[vfat], vt1[vfat], trimVcal[vfat])
         writeVFAT(ohboard, options.gtx, vfat, "VThreshold1", vt1[vfat], 0)
         pass
     ###############
