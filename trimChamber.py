@@ -10,6 +10,7 @@ By: Christine McLean (ch.mclean@cern.ch),
 import sys
 import numpy as np
 import ROOT as r
+import root_numpy as rp
 from array import array
 from gempython.tools.vfat_user_functions_uhal import *
 from gempython.utils.nesteddict import nesteddict as ndict
@@ -203,32 +204,49 @@ if rangeFile == None:
                 "-g%d"%(options.gtx),
                 "--vfatmask=%i"%(options.vfatmask),
                 "--perchannel"])
-    thrFile = r.TFile("VThreshold1Data_Trimmed.root")
-    noiseMax = np.zeros((24, 128), dtype=int)
-    for event in thrFile.thrTree:
-        if event.Nhits > 0:
-            noiseMax[event.vfatN][event.vfatCH] = max(noiseMax[event.vfatN][event.vfatCH], event.vth1)
-            pass
+
+    print 'Analyzing noise'
+
+    # Read output file
+    thrFile = 'VThreshold1Data_Trimmed.root'
+    data = rp.root2array(thrFile, branches=['vfatN', 'vfatCH', 'vth1', 'Nhits'])
+    # Fill in noise histograms
+    noiseHistos = np.zeros((24, 128, 256))
+    for entry in data: # This is much faster than `for event in tree`
+        noiseHistos[entry[0]][entry[1]][entry[2]] += entry[3]
         pass
-    noiseMaxMedian = np.zeros(24)
-    noiseMaxMAD = np.zeros(24)
+
+    # Find the parameters of the noise for every VFAT
+    noiseMedian = np.zeros(24)    # VT1 units
+    noiseMedianDev = np.zeros(24) # VT1 units
     for vfat in range(24):
-        print 'VFAT %d' % vfat
-        print noiseMax[vfat]
-        print goodInf[vfat], convertThresholdToVT1(goodInf[vfat])
-        noiseMaxMedian[vfat], noiseMaxMAD[vfat] = medianAndMAD(noiseMax[vfat])
-        print noiseMaxMedian[vfat]
-        print noiseMaxMAD[vfat]
+        # Compute the mean and variance of the VT1 distributions for every channel
+        x = np.linspace(0, 255, 256)
+        noiseMean = np.zeros(128)
+        noiseSqMean = np.zeros(128)
+        for chan in range(128):
+            if np.sum(noiseHistos[vfat][chan]) != 0:
+                noiseMean[chan] = np.average(x, weights=noiseHistos[vfat][chan])
+                noiseSqMean[chan] = np.average(x*x, weights=noiseHistos[vfat][chan])
+            pass
+        noiseSigma = np.sqrt(noiseSqMean - noiseMean**2)
+        # Use medians of the above as robust estimates for the whole vfat
+        noiseMedian[vfat] = np.median(noiseMean)
+        noiseMedianDev[vfat] = np.median(noiseSigma)
+        print 'VFAT %2d: med=%5.2f, medDev=%5.2f' % (vfat,
+                                                     noiseMedian[vfat],
+                                                     noiseMedianDev[vfat])
         pass
-    print 'Noise MED', noiseMaxMedian
-    print 'Noise MAD', noiseMaxMAD
+
     # We want to align trimVcal just above noise
-    alignTo = noiseMaxMedian + options.zscore * noiseMaxMAD + options.vt1bump # VT1 units
-    trimVT1 = np.zeros(24)
+    alignTo = noiseMedian + options.zscore * noiseMedianDev + options.vt1bump # VT1 units
+    trimVT1 = np.zeros(24) # Unoptimized trimming target (VT1 units)
     for vfat in range(24):
         trimVT1[vfat] = convertThresholdToVT1(trimVcal[vfat]) # VT1 units
         pass
-    vt1 = (alignTo + options.vt1 - trimVT1).astype(int)
+    # Optimized VT1
+    vt1 = (alignTo + options.vt1 - trimVT1).astype(int) # VT1 units
+    # Optimized trimming target
     trimVcal = convertVT1ToThreshold(alignTo).astype(int) # DAC units
 
     # Bias VFATs
