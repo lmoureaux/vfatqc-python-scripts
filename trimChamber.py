@@ -230,13 +230,16 @@ if rangeFile == None:
         pass
     vt1 = (alignTo + options.vt1 - trimVT1).astype(int)
     trimVcal = convertVT1ToThreshold(alignTo).astype(int) # DAC units
+
     # Bias VFATs
     biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
     print "Configuring VT1"
     for vfat in range(24):
-        print "VFAT %d: alignTo=%d, VT1=%d, trimVcal=%d"%(vfat, alignTo[vfat], vt1[vfat], trimVcal[vfat])
+        print "VFAT %d: alignTo=%d, VT1=%d, trimVcal=%d"%(vfat, alignTo[vfat],
+                                                          vt1[vfat], trimVcal[vfat])
         writeVFAT(ohboard, options.gtx, vfat, "VThreshold1", vt1[vfat], 0)
         pass
+
     ###############
     # TRIMDAC = 0
     ###############
