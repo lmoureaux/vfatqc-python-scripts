@@ -197,7 +197,12 @@ if rangeFile == None:
     # Threshold scan @ TrimDAC=31
     ##############################
     print "Starting threshold scan"
-    runCommand(["ultraThreshold.py","--shelf=%i"%(options.shelf),"-s%d"%(options.slot),"-g%d"%(options.gtx),"--vfatmask=%i"%(options.vfatmask),"--perchannel"])
+    runCommand(["ultraThreshold.py",
+                "--shelf=%i"%(options.shelf),
+                "-s%d"%(options.slot),
+                "-g%d"%(options.gtx),
+                "--vfatmask=%i"%(options.vfatmask),
+                "--perchannel"])
     thrFile = r.TFile("VThreshold1Data_Trimmed.root")
     noiseMax = np.zeros((24, 128), dtype=int)
     for event in thrFile.thrTree:
